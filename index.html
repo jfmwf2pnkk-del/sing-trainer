@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Sing Trainer</title>
+  <meta name="description" content="Practise singing intervals and chord arpeggios against a piano.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Sing Trainer">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <main class="app">
+    <header class="top">
+      <h1>Sing Trainer</h1>
+      <span class="status" id="status" aria-live="polite"></span>
+      <button class="icon-btn" id="settingsBtn" aria-label="Settings">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.6 7.6 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1c.5.4 1.1.7 1.7 1l.4 2.5h4l.4-2.5c.6-.3 1.2-.6 1.7-1l2.4 1 2-3.4-2-1.6ZM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z" transform="translate(-1 0)"/></svg>
+      </button>
+    </header>
+
+    <div class="seg" id="kindSeg">
+      <button data-value="intervals">Intervals</button>
+      <button data-value="chords">Chords</button>
+    </div>
+    <div class="seg seg-sm" id="modeSeg">
+      <button data-value="guided">Guided</button>
+      <button data-value="random">Random</button>
+    </div>
+
+    <!-- Guided intervals -->
+    <section class="controls" id="ctl-intervals-guided" hidden>
+      <div class="row">
+        <span class="row-label">Start</span>
+        <span class="select"><select id="giNote" aria-label="Start note"></select></span>
+        <span class="select"><select id="giOct" aria-label="Start octave"></select></span>
+        <div class="seg seg-sm grow" id="giDir">
+          <button data-value="up">↑ Up</button>
+          <button data-value="down">↓ Down</button>
+        </div>
+      </div>
+      <div class="chips" id="giChips"></div>
+    </section>
+
+    <!-- Guided chords -->
+    <section class="controls" id="ctl-chords-guided" hidden>
+      <div class="row">
+        <span class="row-label">Root</span>
+        <span class="select"><select id="gcNote" aria-label="Root note"></select></span>
+        <span class="select"><select id="gcOct" aria-label="Root octave"></select></span>
+        <span class="select grow"><select id="gcType" aria-label="Chord type"></select></span>
+      </div>
+      <div class="row">
+        <div class="seg seg-sm grow" id="gcInv">
+          <button data-value="0">Root</button>
+          <button data-value="1">1st</button>
+          <button data-value="2">2nd</button>
+          <button data-value="3">3rd</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="row-label">Given</span>
+        <div class="seg seg-sm grow" id="gcGiven">
+          <button data-value="root">Root</button>
+          <button data-value="lowest">Lowest note</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Random intervals -->
+    <section class="controls" id="ctl-intervals-random" hidden>
+      <div class="row">
+        <span class="row-label">Direction</span>
+        <div class="seg seg-sm grow" id="riDir">
+          <button data-value="up">↑ Up</button>
+          <button data-value="down">↓ Down</button>
+          <button data-value="both">Both</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="row-label">Range</span>
+        <button class="range-pill" data-open-settings></button>
+      </div>
+    </section>
+
+    <!-- Random chords -->
+    <section class="controls" id="ctl-chords-random" hidden>
+      <div class="row">
+        <span class="row-label">Given</span>
+        <div class="seg seg-sm grow" id="rcGiven">
+          <button data-value="root">Root</button>
+          <button data-value="lowest">Lowest</button>
+          <button data-value="mixed">Mixed</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="row-label">Range</span>
+        <button class="range-pill" data-open-settings></button>
+      </div>
+    </section>
+
+    <section class="card prompt" aria-live="polite">
+      <div class="kicker" id="pKicker"></div>
+      <div class="title-row">
+        <h2 id="pTitle"></h2>
+        <span class="badge" id="pBadge"></span>
+      </div>
+      <div class="notes" id="pNotes"></div>
+    </section>
+
+    <div class="card piano-card">
+      <svg id="piano" role="img" aria-label="Piano keyboard"></svg>
+    </div>
+
+    <div class="bottom">
+      <div class="actions">
+        <button class="btn btn-given" id="playGiven">
+          <span class="btn-main" id="playGivenLbl">Start</span>
+          <span class="btn-sub" id="playGivenSub"></span>
+        </button>
+        <button class="btn btn-reveal" id="reveal">
+          <span class="btn-main">Reveal</span>
+          <span class="btn-sub" id="revealSub"></span>
+        </button>
+        <button class="btn btn-both" id="playBoth">
+          <span class="btn-main" id="playBothLbl">Both</span>
+          <span class="btn-sub" id="playBothSub"></span>
+        </button>
+      </div>
+      <div class="nav">
+        <button class="btn btn-nav" id="prevBtn">‹ Prev</button>
+        <button class="btn btn-nav btn-next" id="nextBtn">Next ›</button>
+      </div>
+    </div>
+  </main>
+
+  <dialog id="settings" class="sheet">
+    <form method="dialog">
+      <div class="sheet-head">
+        <h2>Settings</h2>
+        <button class="text-btn" value="done">Done</button>
+      </div>
+
+      <div class="group">
+        <div class="group-title">Random mode range</div>
+        <label class="cell">
+          <span>Lowest note</span>
+          <span class="select"><select id="rangeLo"></select></span>
+        </label>
+        <label class="cell">
+          <span>Highest note</span>
+          <span class="select"><select id="rangeHi"></select></span>
+        </label>
+      </div>
+
+      <div class="group">
+        <div class="group-title">Playback</div>
+        <div class="cell">
+          <span>Arpeggio speed</span>
+          <div class="seg seg-sm" id="speedSeg">
+            <button type="button" data-value="slow">Slow</button>
+            <button type="button" data-value="normal">Normal</button>
+            <button type="button" data-value="fast">Fast</button>
+          </div>
+        </div>
+        <label class="cell">
+          <span>Play start note on Next</span>
+          <input type="checkbox" class="switch" id="autoplay">
+        </label>
+      </div>
+
+      <p class="fine">Tap any piano key to hear it. Piano sound: Salamander Grand Piano by Alexander Holm (CC&nbsp;BY&nbsp;3.0).</p>
+    </form>
+  </dialog>
+</body>
+</html>
