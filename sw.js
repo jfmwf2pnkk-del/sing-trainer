@@ -1,11 +1,11 @@
 // Offline support: app files are network-first (so updates show up straight away),
 // piano samples are cache-first (they never change).
-const VERSION = 'v2';
+const VERSION = 'v3';
 const SHELL_CACHE = 'shell-' + VERSION;
 const SAMPLE_CACHE = 'samples-v1';
 const SHELL = [
   './', 'index.html', 'style.css', 'manifest.webmanifest',
-  'js/app.js', 'js/audio.js', 'js/piano.js', 'js/theory.js',
+  'js/app.js', 'js/audio.js', 'js/piano.js', 'js/theory.js', 'js/pitch.js', 'js/meter.js',
   'icons/icon-192.png', 'icons/apple-touch-icon.png',
 ];
 const SAMPLE_BASE = 'https://tonejs.github.io/audio/salamander/';

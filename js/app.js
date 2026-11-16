@@ -1,6 +1,7 @@
 import * as T from './theory.js';
 import { PianoAudio } from './audio.js';
 import { renderPiano, setSounding } from './piano.js';
+import { PitchMeter } from './meter.js';
 
 const $ = (id) => document.getElementById(id);
 const STORE_KEY = 'interval-trainer:v1';
@@ -50,6 +51,35 @@ const svg = $('piano');
 let Q = null;
 
 audio.onSound = (midi, on) => setSounding(svg, midi, on);
+
+// Notes the pitch bar compares against: the interval's target, or every chord note
+// (it follows whichever one you're closest to as you sing the arpeggio).
+const meterTargets = () =>
+  Q ? (Q.type === 'interval' ? [Q.sing[0]] : Q.sing).map((n) => ({ midi: n.midi, name: T.noteName(n) })) : [];
+
+function trackKey(midi) {
+  svg.querySelectorAll('.is-tracking').forEach((k) => {
+    if (Number(k.dataset.midi) !== midi) k.classList.remove('is-tracking');
+  });
+  if (midi != null) svg.querySelector(`.key[data-midi="${midi}"]`)?.classList.add('is-tracking');
+}
+
+const meter = new PitchMeter(
+  audio,
+  {
+    stage: $('stage'),
+    meter: $('meter'),
+    fill: $('meterFill'),
+    target: $('meterTarget'),
+    read: $('meterRead'),
+    sung: $('meterSung'),
+    button: $('micBtn'),
+    status: $('status'),
+  },
+  meterTargets,
+  trackKey
+);
+audio.onContextChange = () => meter.attach();
 
 const chordById = (id) => T.CHORDS.find((c) => c.id === id) || T.CHORDS[0];
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -209,6 +239,7 @@ function render() {
   const random = S.mode === 'random';
   $('prevBtn').hidden = random;
   $('nextBtn').parentElement.classList.toggle('single', random);
+  meter.refresh();
 }
 
 function scrollChipIntoView() {
@@ -387,9 +418,24 @@ function setup() {
     e.preventDefault();
   });
 
-  // Unlock audio on the first touch anywhere (iOS needs a user gesture).
-  document.addEventListener('pointerdown', () => audio.unlock(), { once: true });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) audio.stop(); });
+  $('micBtn').addEventListener('click', () => meter.toggle());
+
+  // Every tap makes sure audio is alive (iOS needs a user gesture to start or rebuild it),
+  // and brings the mic back if the pitch bar was on before the app was left.
+  document.addEventListener(
+    'pointerdown',
+    (e) => {
+      audio.unlock();
+      if (!e.target.closest('#micBtn')) meter.resumeIfNeeded();
+    },
+    true
+  );
+  const sleep = () => {
+    audio.sleep();
+    meter.pause();
+  };
+  document.addEventListener('visibilitychange', () => { if (document.hidden) sleep(); });
+  window.addEventListener('pagehide', sleep);
 
   new ResizeObserver(() => Q && drawPiano()).observe(svg.parentElement);
 

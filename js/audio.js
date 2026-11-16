@@ -1,6 +1,11 @@
 // Piano playback with the Web Audio API.
 // Uses Salamander Grand Piano samples (CC-BY 3.0, Alexander Holm) hosted by Tone.js,
 // pitch-shifting the nearest sample. Falls back to a simple synth until samples load.
+//
+// iOS note: after the app has been in the background, iOS can leave the AudioContext
+// "running" but silent, and resume() does not bring it back. So whenever the page has
+// been hidden or interrupted, the next tap throws the old context away and builds a
+// fresh one. Decoded samples are plain AudioBuffers, which work with any context.
 
 const SAMPLE_BASE = 'https://tonejs.github.io/audio/salamander/';
 const SAMPLE_NAMES = [
@@ -18,36 +23,76 @@ function sampleMidi(name) {
 export class PianoAudio {
   constructor() {
     this.ctx = null;
+    this.stale = false; // true once the page was hidden or audio was interrupted
+    this.hasRun = false; // the current context has been running at some point
+    this.session = 'playback';
     this.samples = []; // { midi, buffer }
     this.voices = new Set();
     this.timers = [];
+    this.busyUntil = 0;
     this.onSound = () => {};
+    this.onContextChange = () => {};
   }
 
-  init() {
-    if (this.ctx) return;
-    // Lets sound play with the iPhone ringer switch on silent (iOS 17+).
+  // 'playback' plays with the ringer switch on silent (iOS 17+);
+  // 'play-and-record' is needed while the microphone is in use.
+  setSession(type) {
+    this.session = type;
     try {
-      if (navigator.audioSession) navigator.audioSession.type = 'playback';
+      if (navigator.audioSession) navigator.audioSession.type = type;
     } catch {}
+  }
+
+  ensureContext() {
+    const ctx = this.ctx;
+    const broken =
+      !ctx ||
+      ctx.state === 'closed' ||
+      ctx.state === 'interrupted' ||
+      this.stale ||
+      (this.hasRun && ctx.state === 'suspended');
+    if (!broken) return false;
+
+    if (ctx) {
+      this.stopVoices();
+      ctx.onstatechange = null;
+      ctx.close().catch(() => {});
+    }
+    this.setSession(this.session);
     const AC = window.AudioContext || window.webkitAudioContext;
-    this.ctx = new AC({ latencyHint: 'interactive' });
-    this.master = this.ctx.createGain();
+    const fresh = new AC({ latencyHint: 'interactive' });
+    this.ctx = fresh;
+    this.stale = false;
+    this.hasRun = fresh.state === 'running';
+    fresh.onstatechange = () => {
+      if (fresh.state === 'running') this.hasRun = true;
+      if (fresh.state === 'interrupted') this.stale = true;
+    };
+    this.master = fresh.createGain();
     this.master.gain.value = 0.85;
-    const comp = this.ctx.createDynamicsCompressor();
+    const comp = fresh.createDynamicsCompressor();
     comp.threshold.value = -14;
     comp.ratio.value = 4;
-    this.master.connect(comp).connect(this.ctx.destination);
+    this.master.connect(comp).connect(fresh.destination);
+    return true;
   }
 
   // Call from inside a tap/click handler: iOS only starts audio on a user gesture.
   unlock() {
-    this.init();
+    const replaced = this.ensureContext();
     if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
+    if (replaced) this.onContextChange(this.ctx);
+  }
+
+  // The page went into the background: silence everything and rebuild on next tap.
+  sleep() {
+    this.stop();
+    this.stale = true;
   }
 
   async load(onProgress = () => {}) {
-    this.init();
+    this.ensureContext();
+    const decoder = this.ctx;
     // Load the singing range first so the piano is usable quickly.
     const order = [...SAMPLE_NAMES].sort(
       (a, b) => Math.abs(sampleMidi(a) - 57) - Math.abs(sampleMidi(b) - 57)
@@ -60,7 +105,7 @@ export class PianoAudio {
           const res = await fetch(SAMPLE_BASE + name + '.mp3', { mode: 'cors' });
           if (!res.ok) throw new Error(res.status);
           const data = await res.arrayBuffer();
-          const buffer = await this.ctx.decodeAudioData(data);
+          const buffer = await decoder.decodeAudioData(data);
           this.samples.push({ midi: sampleMidi(name), buffer });
         } catch {
           failed++;
@@ -124,10 +169,7 @@ export class PianoAudio {
     this.voices.add(v);
   }
 
-  stop() {
-    this.timers.forEach(clearTimeout);
-    this.timers = [];
-    this.onSound(null, false);
+  stopVoices() {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
     for (const v of this.voices) {
@@ -144,17 +186,33 @@ export class PianoAudio {
     this.voices.clear();
   }
 
+  stop() {
+    this.timers.forEach(clearTimeout);
+    this.timers = [];
+    this.onSound(null, false);
+    this.stopVoices();
+    this.busyUntil = Math.min(this.busyUntil, performance.now() + 200);
+  }
+
+  // True while the piano is sounding (so the pitch bar can ignore it).
+  isBusy() {
+    return performance.now() < this.busyUntil;
+  }
+
   // events: [{ midi, at (seconds from now), dur (seconds) }]
   play(events) {
     this.unlock();
     this.stop();
     const t0 = this.ctx.currentTime + 0.05;
+    let last = 0;
     for (const e of events) {
       this.voice(e.midi, t0 + e.at, e.dur);
+      last = Math.max(last, e.at + e.dur);
       this.timers.push(setTimeout(() => this.onSound(e.midi, true), (e.at + 0.05) * 1000));
       this.timers.push(
         setTimeout(() => this.onSound(e.midi, false), (e.at + 0.05 + Math.min(e.dur, 0.9)) * 1000)
       );
     }
+    this.busyUntil = performance.now() + (last + 0.45) * 1000;
   }
 }

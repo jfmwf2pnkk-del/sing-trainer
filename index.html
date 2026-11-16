@@ -23,6 +23,9 @@
     <header class="top">
       <h1>Sing Trainer</h1>
       <span class="status" id="status" aria-live="polite"></span>
+      <button class="icon-btn mic-btn" id="micBtn" aria-label="Pitch bar (microphone)" aria-pressed="false">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M12 14.5a3.5 3.5 0 0 0 3.5-3.5V5.5a3.5 3.5 0 1 0-7 0V11a3.5 3.5 0 0 0 3.5 3.5Zm6-3.5a1 1 0 1 0-2 0 4 4 0 0 1-8 0 1 1 0 1 0-2 0 6 6 0 0 0 5 5.9V19H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.1a6 6 0 0 0 5-5.9Z"/></svg>
+      </button>
       <button class="icon-btn" id="settingsBtn" aria-label="Settings">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.6 7.6 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1c.5.4 1.1.7 1.7 1l.4 2.5h4l.4-2.5c.6-.3 1.2-.6 1.7-1l2.4 1 2-3.4-2-1.6ZM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z" transform="translate(-1 0)"/></svg>
       </button>
@@ -108,17 +111,36 @@
       </div>
     </section>
 
-    <section class="card prompt" aria-live="polite">
-      <div class="kicker" id="pKicker"></div>
-      <div class="title-row">
-        <h2 id="pTitle"></h2>
-        <span class="badge" id="pBadge"></span>
-      </div>
-      <div class="notes" id="pNotes"></div>
-    </section>
+    <div class="stage" id="stage">
+      <section class="card prompt" aria-live="polite">
+        <div class="kicker" id="pKicker"></div>
+        <div class="title-row">
+          <h2 id="pTitle"></h2>
+          <span class="badge" id="pBadge"></span>
+        </div>
+        <div class="notes" id="pNotes"></div>
+      </section>
 
-    <div class="card piano-card">
-      <svg id="piano" role="img" aria-label="Piano keyboard"></svg>
+      <div class="card piano-card">
+        <svg id="piano" role="img" aria-label="Piano keyboard"></svg>
+      </div>
+
+      <aside class="card meter" id="meter" hidden aria-label="Pitch bar">
+        <div class="meter-target" id="meterTarget"></div>
+        <div class="meter-track">
+          <span class="meter-cap cap-high" aria-hidden="true">▲</span>
+          <div class="meter-bar">
+            <div class="meter-zone"></div>
+            <div class="meter-tick" style="top:25%"></div>
+            <div class="meter-tick" style="top:75%"></div>
+            <div class="meter-fill" id="meterFill"></div>
+          </div>
+          <div class="meter-mid"></div>
+          <span class="meter-cap cap-low" aria-hidden="true">▼</span>
+        </div>
+        <div class="meter-read" id="meterRead">—</div>
+        <div class="meter-sung" id="meterSung"></div>
+      </aside>
     </div>
 
     <div class="bottom">
